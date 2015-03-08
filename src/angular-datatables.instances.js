@@ -6,13 +6,15 @@ angular.module('datatables.instances', [])
 
 /* @ngInject */
 function dtInstances($q) {
-    var _instances = {};
+    var _listIstances = {};
+    var _lastInstance = null;
     // Promise for fetching the last DT instance
-    var _deferLastDTInstances = null;
-    var _lastDTInstance = null;
+    var _deferLastDTInstance = $q.defer();
+    var _lastDTInstancePromise = _deferLastDTInstance.promise;
     // Promise for fetching the list of DT instances
-    var _deferDTInstances = null;
-    var _dtInstances = null;
+    var _deferListDTInstances = $q.defer();
+    var _listDTInstancesPromise = _deferListDTInstances.promise;
+
     return {
         register: register,
         getLast: getLast,
@@ -24,46 +26,36 @@ function dtInstances($q) {
         dtInstance.DataTable = result.DataTable;
         dtInstance.dataTable = result.dataTable;
 
-        _instances[dtInstance.id] = dtInstance;
-        if (_deferLastDTInstances) {
-            _deferLastDTInstances.resolve(dtInstance);
+        _lastInstance = dtInstance;
+        _listIstances[dtInstance.id] = dtInstance;
+
+        if (_deferLastDTInstance) {
+            _deferLastDTInstance.resolve(dtInstance);
         }
-        if (_deferDTInstances) {
-            _deferDTInstances.resolve(_instances);
+        if (_deferListDTInstances) {
+            _deferListDTInstances.resolve(_listIstances);
         }
+
         return dtInstance;
     }
 
     function getLast() {
         var defer = $q.defer();
-        if (!_lastDTInstance) {
-            _deferLastDTInstances = $q.defer();
-            _lastDTInstance = _deferLastDTInstances.promise;
-        }
-        _lastDTInstance.then(function(dtInstance) {
-            defer.resolve(dtInstance);
-            // Reset the promise
-            _deferLastDTInstances = null;
-            _lastDTInstance = null;
+        _lastDTInstancePromise.then(function(lastInstance) {
+            defer.resolve(lastInstance);
         });
         return defer.promise;
     }
 
     function getList() {
         var defer = $q.defer();
-        if (!_dtInstances) {
-            _deferDTInstances = $q.defer();
-            _dtInstances = _deferDTInstances.promise;
-        }
-        _dtInstances.then(function(instances) {
-            defer.resolve(instances);
-            // Reset the promise
-            _deferDTInstances = null;
-            _dtInstances = null;
+        _listDTInstancesPromise.then(function(listInstances) {
+            defer.resolve(listInstances);
         });
         return defer.promise;
     }
 }
+dtInstances.$inject = ['$q'];
 
 function dtInstanceFactory() {
     var DTInstance = {
